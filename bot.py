@@ -2,7 +2,7 @@ import os
 import threading
 import discord
 from discord.ext import commands
-from google import genai
+import google.generativeai as genai
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # --- Mini serwer WWW dla platformy Render ---
@@ -19,7 +19,6 @@ def run_web_server():
     print(f"Web server started on port {port}")
     server.serve_forever()
 
-# Uruchomienie serwera WWW w osobnym wątku, żeby nie blokował bota
 threading.Thread(target=run_web_server, daemon=True).start()
 # ---------------------------------------------
 
@@ -27,8 +26,9 @@ threading.Thread(target=run_web_server, daemon=True).start()
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# Inicjalizacja Gemini
-gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+# Konfiguracja alternatywnego połączenia Gemini
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 # Inicjalizacja Discorda
 intents = discord.Intents.default()
@@ -43,11 +43,10 @@ async def on_ready():
 async def ask_gemini(ctx, *, prompt: str):
     async with ctx.typing():
         try:
-            response = gemini_client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-            )
+            # Wywołanie Gemini przez bezpieczniejszą bibliotekę
+            response = model.generate_content(prompt)
             answer = response.text
+            
             if len(answer) > 2000:
                 answer = answer[:1990] + "..."
             await ctx.reply(answer)
